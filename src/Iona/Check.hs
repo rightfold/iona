@@ -17,13 +17,15 @@ module Iona.Check
   , checkExpr
   ) where
 
+import Control.Monad (join)
 import Control.Monad.Except (ExceptT, runExceptT, throwError)
 import Control.Monad.Reader (ReaderT, runReaderT)
 import Control.Monad.ST (ST)
 import Control.Monad.Trans (lift)
+import Data.Foldable (traverse_)
 import Data.Map (Map)
 import Data.Proxy (Proxy(..))
-import Data.STRef (newSTRef)
+import Data.STRef (newSTRef, readSTRef, writeSTRef)
 import Data.Text (Text)
 import GHC.TypeLits (type (+), KnownNat, natVal)
 import Iona.Syntax.Expr (Expr(..), UniVar(..))
@@ -50,12 +52,13 @@ data Contexts s n = (:::)
 
 --------------------------------------------------------------------------------
 
-data CheckError
+data CheckError s
   = NoSuchVariable Pos Integer (Name 'True)
+  | forall n. TypeMismatch (Expr s 'True n) (Expr s 'True n)
 
-type Check s n = ReaderT (Contexts s n) (ExceptT CheckError (ST s))
+type Check s n = ReaderT (Contexts s n) (ExceptT (CheckError s) (ST s))
 
-runCheck :: Check s n a -> Contexts s n -> ST s (Either CheckError a)
+runCheck :: Check s n a -> Contexts s n -> ST s (Either (CheckError s) a)
 runCheck a cs = runExceptT $ runReaderT a cs
 
 --------------------------------------------------------------------------------
@@ -65,8 +68,30 @@ freshUniVar x = MkUniVar `flip` x <$> lift (lift (newSTRef Nothing))
 
 --------------------------------------------------------------------------------
 
-unifyExprs :: Expr s 'True n -> Expr s 'True n -> Check s m ()
-unifyExprs = undefined
+unifyExprs :: Expr s 'True (1 + n) -> Expr s 'True (1 + n) -> Check s m ()
+unifyExprs = \a b -> join $ go <$> purge a <*> purge b
+  where
+  purge :: Expr s 'True (1 + n) -> Check s m (Expr s 'True (1 + n))
+  purge e@(UniVar _ (MkUniVar r _)) =
+    maybe (pure e) purge =<< lift (lift (readSTRef r))
+  purge e = pure e
+
+  go :: Expr s 'True (1 + n) -> Expr s 'True (1 + n) -> Check s m ()
+  go (UniVar _ a) (UniVar _ b) | a == b = pure ()
+  go (UniVar _ a) b = solve a b
+  go a (UniVar _ b) = solve b a
+  go (Set _) (Set _) = pure ()
+  go (Var _ a) (Var _ b) | a == b = pure ()
+  go (App _ a as) (App _ b bs) | length as == length bs = do
+    unifyExprs a b
+    traverse_ (uncurry unifyExprs) (zip as bs)
+  go (Fun _ as a) (Fun _ bs b) | length as == length bs = do
+    traverse_ (uncurry unifyExprs) (zip as bs)
+    unifyExprs a b
+  go a b = throwError $ TypeMismatch a b
+
+  solve :: UniVar s (1 + n) -> Expr s 'True (1 + n) -> Check s m ()
+  solve (MkUniVar r _) t = lift . lift $ writeSTRef r (Just t)
 
 checkExpr
   :: forall s n
