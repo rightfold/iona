@@ -1,5 +1,7 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE ExplicitForAll #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
 
 module Iona.Check
@@ -18,7 +20,8 @@ import Control.Monad.Except (ExceptT, runExceptT, throwError)
 import Control.Monad.Reader (ReaderT, runReaderT)
 import Control.Monad.ST (ST)
 import Data.Map (Map)
-import GHC.TypeLits (type (+))
+import Data.Proxy (Proxy(..))
+import GHC.TypeLits (type (+), KnownNat, natVal)
 import Iona.Syntax.Expr (Expr(..))
 import Iona.Syntax.Name (Name)
 import Iona.Syntax.Pos (Pos)
@@ -44,7 +47,7 @@ data Contexts s n = (:::)
 --------------------------------------------------------------------------------
 
 data CheckError
-  = NoSuchVariable Pos (Name 'True)
+  = NoSuchVariable Pos Integer (Name 'True)
 
 type Check s n = ReaderT (Contexts s n) (ExceptT CheckError (ST s))
 
@@ -53,9 +56,14 @@ runCheck a cs = runExceptT $ runReaderT a cs
 
 --------------------------------------------------------------------------------
 
-checkExpr :: Expr s 'True n -> Check s n (Expr s 'True (1 + n))
+checkExpr
+  :: forall s n
+   . KnownNat n
+  => Expr s 'True n
+  -> Check s n (Expr s 'True (1 + n))
 checkExpr (Set p) = pure $ Set p
 checkExpr (Var p x) =
   Reader.asks (Map.lookup x . contextsHead)
-  >>= maybe (throwError $ NoSuchVariable p x)
+  >>= maybe (throwError $ NoSuchVariable p uni x)
             (pure . symbolType)
+  where uni = natVal (Proxy :: Proxy n)
