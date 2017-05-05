@@ -61,9 +61,12 @@ checkExpr
    . KnownNat n
   => Expr s 'True n
   -> Check s n (Expr s 'True (1 + n))
+checkExpr (UniVar p _) = pure $ Set p
 checkExpr (Set p) = pure $ Set p
 checkExpr (Var p x) =
   Reader.asks (Map.lookup x . contextsHead)
   >>= maybe (throwError $ NoSuchVariable p uni x)
             (pure . symbolType)
   where uni = natVal (Proxy :: Proxy n)
+checkExpr (Fun p es e) =
+  Fun p <$> traverse checkExpr es <*> checkExpr e
