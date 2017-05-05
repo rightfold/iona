@@ -29,7 +29,7 @@ import Data.STRef (newSTRef, readSTRef, writeSTRef)
 import Data.Text (Text)
 import GHC.TypeLits (type (+), KnownNat, natVal)
 import Iona.Syntax.Expr (Expr(..), UniVar(..))
-import Iona.Syntax.Name (Name)
+import Iona.Syntax.Name (Name(..))
 import Iona.Syntax.Pos (Pos)
 
 import qualified Control.Monad.Reader as Reader
@@ -105,6 +105,14 @@ checkExpr (Var p x) =
   >>= maybe (throwError $ NoSuchVariable p uni x)
             (pure . symbolType)
   where uni = natVal (Proxy :: Proxy n)
+checkExpr (Abs p xs e) = do
+  xts <- traverse (fmap . (,) <*> fmap (UniVar p) . freshUniVar) xs
+  rt <- Reader.local (insertAll `flip` xts) $
+    checkExpr e
+  pure $ Fun p (map snd xts) rt
+  where
+  insertAll (ctx ::: ctxs) xts = insertAll' ctx xts ::: ctxs
+  insertAll' = foldl $ \a (x, t) -> Map.insert (Local x) (Symbol t) a
 checkExpr (App p e es) = do
   et <- checkExpr e
   ets <- traverse checkExpr es
