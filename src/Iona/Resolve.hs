@@ -51,8 +51,9 @@ resolveInExpr (Var p x) = do
       case Map.lookup s (packages ctx) of
         Nothing -> pure $ Global s x'
         Just s' -> pure $ Global s' x'
-resolveInExpr (Abs p x e) =
-  Reader.local (\c -> c { variables = Map.insert (0, x) (Local x) (variables c) }) $
-    Abs p x <$> resolveInExpr e
-resolveInExpr (App p e1 e2) =
-  App p <$> resolveInExpr e1 <*> resolveInExpr e2
+resolveInExpr (Abs p xs e) =
+  Reader.local (\c -> c { variables = insertAll (variables c) xs }) $
+    Abs p xs <$> resolveInExpr e
+  where insertAll = foldl $ \a x -> Map.insert (0, x) (Local x) a
+resolveInExpr (App p e es) =
+  App p <$> resolveInExpr e <*> traverse resolveInExpr es
