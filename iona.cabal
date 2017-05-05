@@ -19,6 +19,7 @@ library
                      Iona.Parse.Lex,
                      Iona.Parse.Syntax,
                      Iona.Resolve,
+                     Iona.Syntax.Decl,
                      Iona.Syntax.Expr,
                      Iona.Syntax.Name,
                      Iona.Syntax.Pos
