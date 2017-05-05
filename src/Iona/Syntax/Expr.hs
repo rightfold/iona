@@ -7,9 +7,11 @@
 module Iona.Syntax.Expr
   ( UniVar(..)
   , Expr(..)
+  , purge
   ) where
 
-import Data.STRef (STRef)
+import Control.Monad.ST (ST)
+import Data.STRef (STRef, readSTRef)
 import Data.Text (Text)
 import GHC.TypeLits (type (+), Nat)
 import Iona.Syntax.Name (Name)
@@ -35,3 +37,7 @@ data Expr :: * -> Bool -> Nat -> * where
 
 deriving instance Eq (Expr s q n)
 deriving instance Show (Expr s q n)
+
+purge :: Expr s 'True (1 + n) -> ST s (Expr s 'True (1 + n))
+purge e@(UniVar _ (MkUniVar r _)) = maybe (pure e) purge =<< readSTRef r
+purge e = pure e

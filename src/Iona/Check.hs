@@ -25,10 +25,10 @@ import Control.Monad.Trans (lift)
 import Data.Foldable (foldl', traverse_)
 import Data.Map (Map)
 import Data.Proxy (Proxy(..))
-import Data.STRef (newSTRef, readSTRef, writeSTRef)
+import Data.STRef (newSTRef, writeSTRef)
 import Data.Text (Text)
 import GHC.TypeLits (type (+), KnownNat, natVal)
-import Iona.Syntax.Expr (Expr(..), UniVar(..))
+import Iona.Syntax.Expr (Expr(..), UniVar(..), purge)
 import Iona.Syntax.Name (Name(..))
 import Iona.Syntax.Pos (Pos)
 
@@ -69,13 +69,9 @@ freshUniVar x = MkUniVar `flip` x <$> lift (lift (newSTRef Nothing))
 --------------------------------------------------------------------------------
 
 unifyExprs :: Expr s 'True (1 + n) -> Expr s 'True (1 + n) -> Check s m ()
-unifyExprs = \a b -> join $ go <$> purge a <*> purge b
+unifyExprs = \a b -> join $ go <$> lift (lift (purge a))
+                               <*> lift (lift (purge b))
   where
-  purge :: Expr s 'True (1 + n) -> Check s m (Expr s 'True (1 + n))
-  purge e@(UniVar _ (MkUniVar r _)) =
-    maybe (pure e) purge =<< lift (lift (readSTRef r))
-  purge e = pure e
-
   go :: Expr s 'True (1 + n) -> Expr s 'True (1 + n) -> Check s m ()
   go (UniVar _ a) (UniVar _ b) | a == b = pure ()
   go (UniVar _ a) b = solve a b
