@@ -18,6 +18,7 @@ data Expr :: * -> Bool -> Nat -> * where
   Var :: Pos -> Name q -> Expr s q n
   Abs :: Pos -> [Text] -> Expr s q 0 -> Expr s q 0
   App :: Pos -> Expr s q n -> [Expr s q n] -> Expr s q n
+  Fun :: Pos -> [Expr s q (1 + n)] -> Expr s q (1 + n) -> Expr s q (1 + n)
 
 deriving instance Eq (Expr s q n)
 deriving instance Show (Expr s q n)

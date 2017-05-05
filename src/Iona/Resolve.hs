@@ -57,3 +57,5 @@ resolveInExpr (Abs p xs e) =
   where insertAll = foldl $ \a x -> Map.insert (0, x) (Local x) a
 resolveInExpr (App p e es) =
   App p <$> resolveInExpr e <*> traverse resolveInExpr es
+resolveInExpr (Fun p es e) =
+  Fun p <$> traverse resolveInExpr es <*> resolveInExpr e
