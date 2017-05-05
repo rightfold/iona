@@ -11,7 +11,8 @@ library
   default-language:  Haskell2010
   exposed-modules:   Iona.Resolve,
                      Iona.Syntax.Expr,
-                     Iona.Syntax.Name
+                     Iona.Syntax.Name,
+                     Iona.Syntax.Pos
   ghc-options:       -Wall
   hs-source-dirs:    src
 

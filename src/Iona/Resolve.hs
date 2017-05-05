@@ -18,12 +18,13 @@ import Data.Text (Text)
 import GHC.TypeLits (KnownNat, natVal)
 import Iona.Syntax.Expr (Expr(..))
 import Iona.Syntax.Name (Name(..))
+import Iona.Syntax.Pos (Pos)
 
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Map as Map
 
 data ResolveError
-  = NoSuchVariable Integer Text
+  = NoSuchVariable Pos Integer Text
 
 data Context = Context
   { packages :: Map [Text] [Text]
@@ -37,21 +38,21 @@ resolveInExpr
    . KnownNat n
   => Expr s 'False n
   -> Resolve (Expr s 'True n)
-resolveInExpr Set = pure Set
-resolveInExpr (Var x) = do
+resolveInExpr (Set p) = pure $ Set p
+resolveInExpr (Var p x) = do
   uni <- pure $ natVal (Proxy :: Proxy n)
   ctx <- Reader.ask
-  Var <$> case x of
+  Var p <$> case x of
     Pending Nothing x' ->
       case Map.lookup (uni, x') (variables ctx) of
-        Nothing -> throwError $ NoSuchVariable uni x'
+        Nothing -> throwError $ NoSuchVariable p uni x'
         Just n -> pure n
-    Pending (Just p) x' ->
-      case Map.lookup p (packages ctx) of
-        Nothing -> pure $ Global p x'
-        Just p' -> pure $ Global p' x'
-resolveInExpr (Abs x e) =
+    Pending (Just s) x' ->
+      case Map.lookup s (packages ctx) of
+        Nothing -> pure $ Global s x'
+        Just s' -> pure $ Global s' x'
+resolveInExpr (Abs p x e) =
   Reader.local (\c -> c { variables = Map.insert (0, x) (Local x) (variables c) }) $
-    Abs x <$> resolveInExpr e
-resolveInExpr (App e1 e2) =
-  App <$> resolveInExpr e1 <*> resolveInExpr e2
+    Abs p x <$> resolveInExpr e
+resolveInExpr (App p e1 e2) =
+  App p <$> resolveInExpr e1 <*> resolveInExpr e2
