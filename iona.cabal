@@ -2,14 +2,21 @@ name:                iona
 version:             0.0.1
 build-type:          Simple
 cabal-version:       >=1.10
+extra-source-files: src/Iona/Parse/Lex.x
 
 library
-  build-depends:     base >= 4.9 && < 5,
+  build-depends:     array >= 0.5 && < 1,
+                     base >= 4.9 && < 5,
+                     bytestring >= 0.10 && < 1,
                      containers >= 0.5 && < 1,
                      mtl >= 2.2 && < 3,
                      text >= 1.2 && < 2
+  build-tools: alex, happy
   default-language:  Haskell2010
-  exposed-modules:   Iona.Resolve,
+  exposed-modules:   Iona.Parse,
+                     Iona.Parse.Lex,
+                     Iona.Parse.Syntax,
+                     Iona.Resolve,
                      Iona.Syntax.Expr,
                      Iona.Syntax.Name,
                      Iona.Syntax.Pos
@@ -18,9 +25,12 @@ library
 
 test-suite spec
   build-depends:     base >= 4.9 && < 5,
-                     hspec >= 2.4 && < 3
+                     bytestring >= 0.10 && < 1,
+                     hspec >= 2.4 && < 3,
+                     iona
   default-language:  Haskell2010
   ghc-options:       -Wall
   hs-source-dirs:    test
   main-is:           Spec.hs
+  other-modules:     Iona.ParseSpec
   type:              exitcode-stdio-1.0

@@ -10,3 +10,4 @@ data Pos = Pos
   , posLine :: {-# UNPACK #-} !Int
   , posColumn :: {-# UNPACK #-} !Int
   }
+  deriving (Eq, Show)
