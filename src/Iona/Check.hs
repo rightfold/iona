@@ -22,7 +22,7 @@ import Control.Monad.Except (ExceptT, runExceptT, throwError)
 import Control.Monad.Reader (ReaderT, runReaderT)
 import Control.Monad.ST (ST)
 import Control.Monad.Trans (lift)
-import Data.Foldable (traverse_)
+import Data.Foldable (foldl', traverse_)
 import Data.Map (Map)
 import Data.Proxy (Proxy(..))
 import Data.STRef (newSTRef, readSTRef, writeSTRef)
@@ -112,7 +112,7 @@ checkExpr (Abs p xs e) = do
   pure $ Fun p (map snd xts) rt
   where
   insertAll (ctx ::: ctxs) xts = insertAll' ctx xts ::: ctxs
-  insertAll' = foldl $ \a (x, t) -> Map.insert (Local x) (Symbol t) a
+  insertAll' = foldl' $ \a (x, t) -> Map.insert (Local x) (Symbol t) a
 checkExpr (App p e es) = do
   et <- checkExpr e
   ets <- traverse checkExpr es

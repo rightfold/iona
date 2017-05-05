@@ -12,6 +12,7 @@ module Iona.Resolve
 
 import Control.Monad.Except (throwError)
 import Control.Monad.Reader (ReaderT)
+import Data.Foldable (foldl')
 import Data.Map (Map)
 import Data.Proxy (Proxy(..))
 import Data.Text (Text)
@@ -54,7 +55,7 @@ resolveInExpr (Var p x) = do
 resolveInExpr (Abs p xs e) =
   Reader.local (\c -> c { variables = insertAll (variables c) xs }) $
     Abs p xs <$> resolveInExpr e
-  where insertAll = foldl $ \a x -> Map.insert (0, x) (Local x) a
+  where insertAll = foldl' $ \a x -> Map.insert (0, x) (Local x) a
 resolveInExpr (App p e es) =
   App p <$> resolveInExpr e <*> traverse resolveInExpr es
 resolveInExpr (Fun p es e) =
