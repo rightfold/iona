@@ -15,7 +15,7 @@ import GHC.TypeLits (type (+), Nat)
 import Iona.Syntax.Name (Name)
 import Iona.Syntax.Pos (Pos)
 
-data UniVar s n = MkUniVar (STRef s (Expr s 'True n)) Text
+data UniVar s n = MkUniVar (STRef s (Maybe (Expr s 'True n))) Text
 
 instance Eq (UniVar s n) where
   MkUniVar a _ == MkUniVar b _ = a == b

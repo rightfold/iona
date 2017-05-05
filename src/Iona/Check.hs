@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ExplicitForAll #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
 
@@ -19,10 +20,13 @@ module Iona.Check
 import Control.Monad.Except (ExceptT, runExceptT, throwError)
 import Control.Monad.Reader (ReaderT, runReaderT)
 import Control.Monad.ST (ST)
+import Control.Monad.Trans (lift)
 import Data.Map (Map)
 import Data.Proxy (Proxy(..))
+import Data.STRef (newSTRef)
+import Data.Text (Text)
 import GHC.TypeLits (type (+), KnownNat, natVal)
-import Iona.Syntax.Expr (Expr(..))
+import Iona.Syntax.Expr (Expr(..), UniVar(..))
 import Iona.Syntax.Name (Name)
 import Iona.Syntax.Pos (Pos)
 
@@ -56,6 +60,14 @@ runCheck a cs = runExceptT $ runReaderT a cs
 
 --------------------------------------------------------------------------------
 
+freshUniVar :: Text -> Check s n (UniVar s m)
+freshUniVar x = MkUniVar `flip` x <$> lift (lift (newSTRef Nothing))
+
+--------------------------------------------------------------------------------
+
+unifyExprs :: Expr s 'True n -> Expr s 'True n -> Check s m ()
+unifyExprs = undefined
+
 checkExpr
   :: forall s n
    . KnownNat n
@@ -68,5 +80,12 @@ checkExpr (Var p x) =
   >>= maybe (throwError $ NoSuchVariable p uni x)
             (pure . symbolType)
   where uni = natVal (Proxy :: Proxy n)
+checkExpr (App p e es) = do
+  et <- checkExpr e
+  ets <- traverse checkExpr es
+  rt <- UniVar p <$> freshUniVar "r"
+  let ft = Fun p ets rt
+  unifyExprs et ft
+  pure rt
 checkExpr (Fun p es e) =
   Fun p <$> traverse checkExpr es <*> checkExpr e
