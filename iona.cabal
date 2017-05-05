@@ -13,7 +13,8 @@ library
                      text >= 1.2 && < 2
   build-tools: alex, happy
   default-language:  Haskell2010
-  exposed-modules:   Iona.Parse,
+  exposed-modules:   Iona.CodeGen.PHP,
+                     Iona.Parse,
                      Iona.Parse.Lex,
                      Iona.Parse.Syntax,
                      Iona.Resolve,
@@ -32,5 +33,6 @@ test-suite spec
   ghc-options:       -Wall
   hs-source-dirs:    test
   main-is:           Spec.hs
-  other-modules:     Iona.ParseSpec
+  other-modules:     Iona.CodeGen.PHPSpec,
+                     Iona.ParseSpec
   type:              exitcode-stdio-1.0
